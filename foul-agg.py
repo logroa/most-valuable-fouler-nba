@@ -22,6 +22,17 @@ mft = fouls_and_freethrows[['URL', 'Quarter', 'SecLeft', 'made_ft']]
 mft1 = mft.groupby(['URL', 'Quarter', 'SecLeft']).sum()
 #num free throws
 num_ft = fouls_and_freethrows.groupby(['URL', 'Quarter', 'SecLeft']).size() - 1
-#
+#bringing it together
 new_df = pd.merge(fouls, pd.merge(num_ft.rename('num_ft'), mft1, on=['URL', 'Quarter', 'SecLeft']), on=['URL', 'Quarter', 'SecLeft'])
 total = new_df.rename(columns={'0': 'num_ft'})
+total = total.drop(['FreeThrowOutcome', 'FreeThrowNum'], axis=1)
+
+#conditions = [
+#    (total['num_ft'] > 2),
+#    (total['made_ft'] == total['num_ft'] & total['num_ft'] == 2),
+#    (total['FoulType'] == 'shooting' & total['num_ft'] == 1)
+#]
+
+total['3pt_foul'] = np.where(total['num_ft'] > 2, 1, 0)
+total['and_one'] = np.where(total['FoulType'] == 'shooting' & total['num_ft'] == 1, 1, 0)
+total['made_both_fts'] = np.where(total['made_ft'] == total['num_ft'] & total['num_ft'] == 2, 1, 0)
