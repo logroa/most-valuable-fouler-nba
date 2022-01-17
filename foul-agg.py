@@ -26,13 +26,21 @@ num_ft = fouls_and_freethrows.groupby(['URL', 'Quarter', 'SecLeft']).size() - 1
 new_df = pd.merge(fouls, pd.merge(num_ft.rename('num_ft'), mft1, on=['URL', 'Quarter', 'SecLeft']), on=['URL', 'Quarter', 'SecLeft'])
 total = new_df.rename(columns={'0': 'num_ft'})
 total = total.drop(['FreeThrowOutcome', 'FreeThrowNum'], axis=1)
+#good fouls
+conditions = [
+    ((total['made_ft'] < total['num_ft']) & (total['num_ft'] == 2))
+]
 
-#conditions = [
-#    (total['num_ft'] > 2),
-#    (total['made_ft'] == total['num_ft'] & total['num_ft'] == 2),
-#    (total['FoulType'] == 'shooting' & total['num_ft'] == 1)
-#]
+total['good_foul'] = np.where(conditions[0], 1, 0)
+#percentage of fouls that are good
+player_fouls = total[['Fouler']].groupby('Fouler').size()
+good_fouls = total[['Fouler', 'good_foul']].groupby('Fouler').sum()
 
-total['3pt_foul'] = np.where(total['num_ft'] > 2, 1, 0)
-total['and_one'] = np.where(total['FoulType'] == 'shooting' & total['num_ft'] == 1, 1, 0)
-total['made_both_fts'] = np.where(total['made_ft'] == total['num_ft'] & total['num_ft'] == 2, 1, 0)
+players = pd.merge(player_fouls.rename('total_fouls'), good_fouls, on=['Fouler'])
+players['good_foul_pct'] = players['good_foul']/players['total_fouls']
+players = players.loc[players['total_fouls'] >= 20]
+players.sort_values(by=['good_foul_pct'], inplace=True, ascending=False)
+players = players.reset_index()
+
+
+#incorporate score and other aspects down here
