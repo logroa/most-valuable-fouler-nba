@@ -32,15 +32,25 @@ conditions = [
 ]
 
 total['good_foul'] = np.where(conditions[0], 1, 0)
-#percentage of fouls that are good
+#percentage of fouls that are good (two point shot and they make less than two fts)
 player_fouls = total[['Fouler']].groupby('Fouler').size()
 good_fouls = total[['Fouler', 'good_foul']].groupby('Fouler').sum()
 
 players = pd.merge(player_fouls.rename('total_fouls'), good_fouls, on=['Fouler'])
 players['good_foul_pct'] = players['good_foul']/players['total_fouls']
+
+# points saved
+league_3pt_perc = {}
+league_3pt_perc['15-16'] = .356
+league_2pt_perc = {}
+league_2pt_perc['15-16'] = .485
+
+total['pts_saved'] = np.where(total['num_ft'] == 0, 0, np.where(total['num_ft'] == 1, 0 - total['made_ft'], np.where(total['num_ft'] == 2, league_2pt_perc['15-16']*2 - total['made_ft'], np.where(total['num_ft'] == 3, league_3pt_perc['15-16']*3 - total['made_ft'], 0))))
+pts_saved = total[['Fouler', 'pts_saved']].groupby('Fouler').sum()
+
+players = pd.merge(players, pts_saved, on=['Fouler'])
 players = players.loc[players['total_fouls'] >= 20]
 players.sort_values(by=['good_foul_pct'], inplace=True, ascending=False)
 players = players.reset_index()
 
-
-#incorporate score and other aspects down here
+#incorporate score and other aspects down here i.e. time left
