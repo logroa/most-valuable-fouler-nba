@@ -45,10 +45,18 @@ league_3pt_perc['15-16'] = .356
 league_2pt_perc = {}
 league_2pt_perc['15-16'] = .485
 
-total['pts_saved'] = np.where(total['num_ft'] == 0, 0, np.where(total['num_ft'] == 1, 0 - total['made_ft'], np.where(total['num_ft'] == 2, league_2pt_perc['15-16']*2 - total['made_ft'], np.where(total['num_ft'] == 3, league_3pt_perc['15-16']*3 - total['made_ft'], 0))))
-pts_saved = total[['Fouler', 'pts_saved']].groupby('Fouler').sum()
+total['expected_pts_saved'] = np.where(total['num_ft'] == 0, 0, np.where(total['num_ft'] == 1, 0 - total['made_ft'], np.where(total['num_ft'] == 2, league_2pt_perc['15-16']*2 - total['made_ft'], np.where(total['num_ft'] == 3, league_3pt_perc['15-16']*3 - total['made_ft'], 0))))
+exp_pts_saved = total[['Fouler', 'expected_pts_saved']].groupby('Fouler').sum()
 
-players = pd.merge(players, pts_saved, on=['Fouler'])
+total['max_possible_pts_saved'] = np.where(total['num_ft'] == 0, 0, np.where(total['num_ft'] == 1, 0 - total['made_ft'], np.where(total['num_ft'] == 2, 2 - total['made_ft'], np.where(total['num_ft'] == 3, 3 - total['made_ft'], 0))))
+max_possible_pts_saved = total[['Fouler', 'max_possible_pts_saved']].groupby('Fouler').sum()
+
+total['min_possible_pts_saved'] = np.where(total['num_ft'] == 0, 0, np.where(total['num_ft'] == 1, 0 - total['made_ft'], np.where(total['num_ft'] == 2, 0 - total['made_ft'], np.where(total['num_ft'] == 3, 0 - total['made_ft'], 0))))
+min_possible_pts_saved = total[['Fouler', 'min_possible_pts_saved']].groupby('Fouler').sum()
+
+
+
+players = pd.merge(players, pd.merge(exp_pts_saved, pd.merge(max_possible_pts_saved, min_possible_pts_saved, on=['Fouler']), on=['Fouler']), on=['Fouler'])
 players = players.loc[players['total_fouls'] >= 20]
 players.sort_values(by=['good_foul_pct'], inplace=True, ascending=False)
 players = players.reset_index()
