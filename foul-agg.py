@@ -3,6 +3,9 @@ import numpy as np
 import pandas as pd
 import csv
 import math
+import dataframe_image as dfi
+import seaborn as sb
+import matplotlib.pyplot as plt
 
 #read in data
 playbyplay = pd.read_csv('NBA_PBP_2015-16.csv')
@@ -28,7 +31,7 @@ total = new_df.rename(columns={'0': 'num_ft'})
 total = total.drop(['FreeThrowOutcome', 'FreeThrowNum'], axis=1)
 #good fouls
 conditions = [
-    ((total['made_ft'] < total['num_ft']) & (total['num_ft'] == 2))
+    ((total['made_ft'] < total['num_ft']) & (total['num_ft'] == 2)),
 ]
 
 total['good_foul'] = np.where(conditions[0], 1, 0)
@@ -54,11 +57,24 @@ max_possible_pts_saved = total[['Fouler', 'max_possible_pts_saved']].groupby('Fo
 total['min_possible_pts_saved'] = np.where(total['num_ft'] == 0, 0, np.where(total['num_ft'] == 1, 0 - total['made_ft'], np.where(total['num_ft'] == 2, 0 - total['made_ft'], np.where(total['num_ft'] == 3, 0 - total['made_ft'], 0))))
 min_possible_pts_saved = total[['Fouler', 'min_possible_pts_saved']].groupby('Fouler').sum()
 
-
-
 players = pd.merge(players, pd.merge(exp_pts_saved, pd.merge(max_possible_pts_saved, min_possible_pts_saved, on=['Fouler']), on=['Fouler']), on=['Fouler'])
 players = players.loc[players['total_fouls'] >= 20]
-players.sort_values(by=['good_foul_pct'], inplace=True, ascending=False)
+
+players['expected_pts_saved/good_foul'] = players['expected_pts_saved']/players['good_foul']
+
+#players.sort_values(by=['expected_pts_saved/good_foul'], inplace=True, ascending=False)
+players.sort_values(by=['total_fouls'], inplace=True, ascending=False)
 players = players.reset_index()
+
+#dfi.export(players, 'nba-fouls.png', max_rows=-1)
+
+fig, ax = plt.subplots()
+sb.set_style("darkgrid")
+sb.scatterplot(data=players, x='expected_pts_saved/good_foul', y='good_foul_pct')
+ax.set_title('Expected Points Saved per Good Foul vs Good Foul Pct')
+ax.set_xlabel("Expected Points Saved per Good Foul")
+ax.set_ylabel("Good Foul Pct")
+
+plt.savefig('expected-pts-saved/good-foul-vs-good-foul-pct-2015-16.png')
 
 #incorporate score and other aspects down here i.e. time left
